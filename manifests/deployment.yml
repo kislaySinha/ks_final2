@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: kislaysinhaksfinal3 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kislaysinhaksfinal3
+  template:
+    metadata:
+      labels:
+        app: kislaysinhaksfinal3 
+    spec:
+      containers:
+        - name: kislaysinhaksfinal3 
+          image: kislay99.azurecr.io/kislaysinhaksfinal3
+          ports:
+          - containerPort: 80
