@@ -44,30 +44,32 @@ stages:
   variables:
     acrsecret: kislay99acrauth
   jobs:
-    - job: Deploy
+    - deployment: Deploy
       displayName: Deploy to AKS
+      environment: 'msp1dev.default'
       pool:
         vmImage: ubuntu-latest
-      steps:
-      - task: DownloadPipelineArtifact@2
-        inputs:
-          buildType: 'current'
-          artifactName: 'manifests1'
-          targetPath: '$(Pipeline.Workspace)/manifests1'
-      
-      - task: KubernetesManifest@0
-        inputs:
-          action: 'createSecret'
-          kubernetesServiceConnection: 'msp1-default'
-          namespace: 'default'
-          secretType: 'dockerRegistry'
-          secretName: '$(acrsecret)'
-          dockerRegistryEndpoint: 'kislay99'
-      - task: KubernetesManifest@0
-        inputs:
-          action: 'deploy'
-          kubernetesServiceConnection: 'msp1-default'
-          namespace: 'default'
-          manifests: |
-            $(Pipeline.Workspace)/manifests1/deployment.yml
-            $(Pipeline.Workspace)/manifests1/service.yml
+      strategy:
+       runOnce:
+         deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              artifactName: 'manifests1'
+              targetPath: '$(Pipeline.Workspace)/manifests1'
+          
+          - task: KubernetesManifest@0
+            inputs:
+              action: 'createSecret'
+              namespace: 'default'
+              secretType: 'dockerRegistry'
+              secretName: '$(acrsecret)'
+              dockerRegistryEndpoint: 'kislay99'
+          - task: KubernetesManifest@0
+            inputs:
+              action: 'deploy'
+              namespace: 'default'
+              manifests: |
+                $(Pipeline.Workspace)/manifests1/deployment.yml
+                $(Pipeline.Workspace)/manifests1/service.yml
