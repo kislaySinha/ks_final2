@@ -1,0 +1,73 @@
+# Docker
+# Build a Docker image
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  imageRepo: finalapp
+  tag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'kislay99'
+        repository: '$(imageRepo)'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/azure-vote/Dockerfile'
+        tags: |
+          $(tag)
+          latest
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Pipeline.Workspace)/s/manifests'
+        artifact: 'manifests1'
+        publishLocation: 'pipeline'
+        
+
+
+- stage: Deploy
+  displayName: Deploy to Dev
+  dependsOn: Build
+  variables:
+    acrsecret: kislay99acrauth
+  jobs:
+    - job: Deploy
+      displayName: Deploy to AKS
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          artifactName: 'manifests1'
+          targetPath: '$(Pipeline.Workspace)/manifests1'
+      
+      - task: KubernetesManifest@0
+        inputs:
+          action: 'createSecret'
+          kubernetesServiceConnection: 'msp1-default'
+          namespace: 'default'
+          secretType: 'dockerRegistry'
+          secretName: '$(acrsecret)'
+          dockerRegistryEndpoint: 'kislay99'
+      - task: KubernetesManifest@0
+        inputs:
+          action: 'deploy'
+          kubernetesServiceConnection: 'msp1-default'
+          namespace: 'default'
+          manifests: |
+            $(Pipeline.Workspace)/manifests1/deployment.yml
+            $(Pipeline.Workspace)/manifests1/service.yml
